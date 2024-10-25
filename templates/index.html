@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LingoBridge Chatbot</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="chat-container">
+            <div id="chat-box"></div>
+
+            <!-- Language selection dropdown -->
+            <label for="language-select">Translate to:</label>
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="it">Italian</option>
+                <!-- Add more languages as needed -->
+            </select>
+
+            <!-- Input field with oninput event to detect language with debounce -->
+            <input type="text" id="user-input" placeholder="Type your message..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        // Function to detect language
+        async function detectLanguage(message) {
+            const response = await fetch("/detect_language", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message })
+            });
+            const data = await response.json();
+            return data.language || "Unknown";
+        }
+
+        // Function to send the message for translation
+        async function sendMessage() {
+            const message = document.getElementById("user-input").value;
+            const language = document.getElementById("language-select").value;
+
+            if (!message.trim()) {
+                document.getElementById("chat-box").innerHTML += `<p><strong>Bot:</strong> Please enter a message.</p>`;
+                return;
+            }
+
+            // Detect language and display it before translating
+            const detectedLanguage = await detectLanguage(message);
+            document.getElementById("chat-box").innerHTML += `<p><strong>Bot:</strong> Detected language: ${detectedLanguage}</p>`;
+
+            // Send the message for translation
+            const response = await fetch("/translate", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message, language })
+            });
+
+            const data = await response.json();
+
+            // Display user's original message and translation
+            document.getElementById("chat-box").innerHTML += `<p><strong>You:</strong> ${data.original_message || "No message"}</p>`;
+            document.getElementById("chat-box").innerHTML += `<p><strong>Translated:</strong> ${data.translated_message || "Translation failed"}</p>`;
+            
+            // Clear the input field
+            document.getElementById("user-input").value = "";  
+        }
+    </script>
+</body>
+</html>
